@@ -305,6 +305,47 @@ router.post(
  *       200:
  *         description: Logged out successfully
  */
+/**
+ * @swagger
+ * /api/auth/change-password:
+ *   post:
+ *     summary: Change user password (authenticated)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [oldPassword, newPassword]
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *                 minLength: 6
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Invalid old password or validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  "/change-password",
+  protect,
+  [
+    body("oldPassword").notEmpty().withMessage("Old password is required"),
+    body("newPassword").isLength({ min: 6 }).withMessage("New password must be at least 6 characters"),
+  ],
+  validate,
+  authController.changePassword
+);
+
 router.post("/logout", protect, authController.logout);
 
 /**
