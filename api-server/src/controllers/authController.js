@@ -275,6 +275,42 @@ exports.logout = async (req, res) => {
   }
 };
 
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    // Get user with password field
+    const user = await User.findById(userId).select("+password");
+    
+    if (!user) {
+      return sendError(res, "User not found.", 404);
+    }
+
+    // Check if old password is correct
+    const isOldPasswordCorrect = await user.comparePassword(oldPassword);
+    
+    if (!isOldPasswordCorrect) {
+      return sendError(res, "Current password is incorrect.", 400);
+    }
+
+    // Check if new password is different from old password
+    const isSamePassword = await user.comparePassword(newPassword);
+    
+    if (isSamePassword) {
+      return sendError(res, "New password must be different from current password.", 400);
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    return sendSuccess(res, "Password changed successfully.");
+  } catch (err) {
+    return sendError(res, err.message);
+  }
+};
+
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate("profileRef");
