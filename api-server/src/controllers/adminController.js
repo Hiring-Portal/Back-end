@@ -67,8 +67,20 @@ exports.bulkImportStudents = async (req, res) => {
 exports.bulkImportCompanies = async (req, res) => {
   try {
     if (!req.file) return sendError(res, "Import file required.", 400);
+
     const results = await importCompanies(req.file.path, req.user._id);
+
+    // ✅ ADD THIS CONDITION
+    if (results.created === 0 && results.errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Company import failed.",
+        data: results,
+      });
+    }
+
     return sendSuccess(res, "Companies import completed.", results);
+
   } catch (err) {
     return sendError(res, err.message);
   }

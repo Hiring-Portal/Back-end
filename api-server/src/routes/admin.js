@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const adminController = require("../controllers/adminController");
 const { protect } = require("../middlewares/auth");
 const { authorize } = require("../middlewares/roleCheck");
@@ -17,16 +18,7 @@ const isAdmin = [protect, authorize("admin")];
  *   description: Admin control panel — analytics, approvals, bulk imports
  */
 
-/**
- * @swagger
- * /api/admin/dashboard:
- *   get:
- *     summary: Get admin dashboard with full platform analytics
- *     tags: [Admin]
- *     responses:
- *       200:
- *         description: Platform-wide stats and recent activity
- */
+// Dashboard
 router.get("/dashboard", isAdmin, adminController.getDashboard);
 
 /**
@@ -66,10 +58,10 @@ router.post("/import/students", isAdmin, importLimiter, uploadImport, adminContr
  *               import:
  *                 type: string
  *                 format: binary
- *                 description: Excel or CSV file with columns companyName, email, phone
+ *                 description: Excel or CSV file with columns companyName, email, phone, website, industry etc.
  *     responses:
  *       200:
- *         description: Import results
+ *         description: Import results with created, skipped and errors
  */
 router.post("/import/companies", isAdmin, importLimiter, uploadImport, adminController.bulkImportCompanies);
 
@@ -140,7 +132,7 @@ router.patch("/companies/:id/approve", isAdmin, adminController.approveCompany);
 router.patch(
   "/companies/:id/reject",
   isAdmin,
-  [body("reason").notEmpty()],
+  [body("reason").optional().isString().trim()],
   validate,
   adminController.rejectCompany
 );
@@ -190,7 +182,7 @@ router.patch("/jobs/:id/approve", isAdmin, adminController.approveJob);
 router.patch(
   "/jobs/:id/reject",
   isAdmin,
-  [body("reason").notEmpty()],
+  [body("reason").optional().isString().trim()],
   validate,
   adminController.rejectJob
 );
@@ -342,7 +334,7 @@ router.get("/payments", isAdmin, adminController.getPaymentReports);
 router.post(
   "/broadcast",
   isAdmin,
-  [body("title").notEmpty(), body("message").notEmpty()],
+  [body("title").notEmpty().trim(), body("message").notEmpty().trim()],
   validate,
   adminController.sendBroadcast
 );
