@@ -27,9 +27,15 @@ app.use(
   })
 );
 
+// Configure CORS origins. In production set `CORS_ORIGIN` to a comma-separated list of allowed origins.
+const DEFAULT_FRONTEND = "https://frent-end-jze4.vercel.app";
+const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : [DEFAULT_FRONTEND];
+
+console.log("Allowed CORS origins:", allowedOrigins);
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : "*",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
