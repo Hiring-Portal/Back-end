@@ -19,13 +19,6 @@ const notificationRoutes = require("./routes/notification");
 
 const app = express();
 
-app.set("trust proxy", 1);
-
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
-);
 
 // Configure CORS origins. In production set `CORS_ORIGIN` to a comma-separated list of allowed origins.
 const DEFAULT_FRONTEND = "https://frent-end-jze4.vercel.app";
@@ -33,15 +26,7 @@ const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split("
 
 console.log("Allowed CORS origins:", allowedOrigins);
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
-
+app.use(cors());
 app.use(generalLimiter);
 
 app.use(express.json({ limit: "10mb" }));
