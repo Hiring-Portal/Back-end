@@ -4,9 +4,30 @@ const razorpay = require("../config/razorpay");
 const { sendSuccess, sendError } = require("../utils/response");
 
 const PLANS = Subscription.statics?.PLANS || {
-  one_time: { price: 4999, validityDays: 365, jobsAllowed: 1, hiresAllowed: 1, unlockCredits: 20, label: "One Time Hire" },
-  monthly: { price: 9999, validityDays: 30, jobsAllowed: 10, hiresAllowed: 10, unlockCredits: 100, label: "Monthly" },
-  yearly: { price: 79999, validityDays: 365, jobsAllowed: -1, hiresAllowed: -1, unlockCredits: -1, label: "Yearly (Unlimited)" },
+  one_time: {
+    price: 4999,
+    validityDays: 365,
+    jobsAllowed: 1,
+    hiresAllowed: 1,
+    unlockCredits: 20,
+    label: "One Time Hire",
+  },
+  monthly: {
+    price: 9999,
+    validityDays: 30,
+    jobsAllowed: 10,
+    hiresAllowed: 10,
+    unlockCredits: 100,
+    label: "Monthly",
+  },
+  yearly: {
+    price: 79999,
+    validityDays: 365,
+    jobsAllowed: -1,
+    hiresAllowed: -1,
+    unlockCredits: -1,
+    label: "Yearly (Unlimited)",
+  },
 };
 
 exports.getPlans = async (req, res) => {
@@ -16,10 +37,18 @@ exports.getPlans = async (req, res) => {
       ...plan,
       priceFormatted: `₹${plan.price.toLocaleString("en-IN")}`,
       features: [
-        plan.jobsAllowed === -1 ? "Unlimited Jobs" : `${plan.jobsAllowed} Job Posting${plan.jobsAllowed > 1 ? "s" : ""}`,
-        plan.hiresAllowed === -1 ? "Unlimited Hires" : `${plan.hiresAllowed} Hire${plan.hiresAllowed > 1 ? "s" : ""}`,
-        plan.unlockCredits === -1 ? "Unlimited Unlocks" : `${plan.unlockCredits} Candidate Unlocks`,
-        plan.validityDays === 365 ? "1 Year Validity" : `${plan.validityDays} Days Validity`,
+        plan.jobsAllowed === -1
+          ? "Unlimited Jobs"
+          : `${plan.jobsAllowed} Job Posting${plan.jobsAllowed > 1 ? "s" : ""}`,
+        plan.hiresAllowed === -1
+          ? "Unlimited Hires"
+          : `${plan.hiresAllowed} Hire${plan.hiresAllowed > 1 ? "s" : ""}`,
+        plan.unlockCredits === -1
+          ? "Unlimited Unlocks"
+          : `${plan.unlockCredits} Candidate Unlocks`,
+        plan.validityDays === 365
+          ? "1 Year Validity"
+          : `${plan.validityDays} Days Validity`,
       ],
     }));
     return sendSuccess(res, "Subscription plans.", plans);
@@ -31,21 +60,28 @@ exports.getPlans = async (req, res) => {
 exports.createOrder = async (req, res) => {
   try {
     const { planType } = req.body;
+    console.log("planType", planType);
     const plan = PLANS[planType];
     if (!plan) return sendError(res, "Invalid plan type.", 400);
 
     const company = await Company.findOne({ userId: req.user._id });
     if (!company) return sendError(res, "Company not found.", 404);
-    if (!company.isApproved) return sendError(res, "Company must be approved before purchasing.", 403);
+    if (!company.isApproved)
+      return sendError(res, "Company must be approved before purchasing.", 403);
 
     const amountInPaise = plan.price * 100;
-    const order = await razorpay.orders.create({
-      amount: amountInPaise,
-      currency: "INR",
-      receipt: `sub_${company._id}_${Date.now()}`,
-      notes: { companyId: company._id.toString(), planType },
-    });
-
+    console.log("amountInPaise", amountInPaise);
+    try {
+      const order = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt: `sub_${company._id}`,
+        notes: { companyId: company._id.toString(), planType },
+      });
+    } catch (error) {
+      console.log("error", error);
+    }
+    console.log("order", order);
     const Payment = require("../models/Payment");
     const payment = await Payment.create({
       companyId: company._id,
@@ -55,6 +91,7 @@ exports.createOrder = async (req, res) => {
       status: "created",
       planType,
     });
+    console.log("Payment created", payment);
 
     const subscription = await Subscription.create({
       companyId: company._id,
@@ -68,7 +105,9 @@ exports.createOrder = async (req, res) => {
       paymentId: payment._id,
     });
 
-    await Payment.findByIdAndUpdate(payment._id, { subscriptionId: subscription._id });
+    await Payment.findByIdAndUpdate(payment._id, {
+      subscriptionId: subscription._id,
+    });
 
     return sendSuccess(res, "Order created.", {
       orderId: order.id,
@@ -99,7 +138,8 @@ exports.getMySubscription = async (req, res) => {
       subscriptionEnd: company.subscriptionEnd,
       remainingHires: company.remainingHires,
       remainingUnlocks: company.remainingUnlocks,
-      remainingJobs: company.currentPlan === "yearly" ? "Unlimited" : company.remainingJobs,
+      remainingJobs:
+        company.currentPlan === "yearly" ? "Unlimited" : company.remainingJobs,
       history: subscriptions,
     });
   } catch (err) {
@@ -120,9 +160,12 @@ exports.adminManageSubscription = async (req, res) => {
       company.currentPlan = planType;
       company.subscriptionActive = true;
       company.subscriptionStart = new Date();
-      company.subscriptionEnd = new Date(Date.now() + plan.validityDays * 24 * 60 * 60 * 1000);
+      company.subscriptionEnd = new Date(
+        Date.now() + plan.validityDays * 24 * 60 * 60 * 1000,
+      );
       company.hireQuota = plan.hiresAllowed === -1 ? 999999 : plan.hiresAllowed;
-      company.candidateUnlockCredits = plan.unlockCredits === -1 ? 999999 : plan.unlockCredits;
+      company.candidateUnlockCredits =
+        plan.unlockCredits === -1 ? 999999 : plan.unlockCredits;
       company.jobsAllowed = plan.jobsAllowed === -1 ? 999999 : plan.jobsAllowed;
       await company.save();
       return sendSuccess(res, "Subscription activated.", company);
