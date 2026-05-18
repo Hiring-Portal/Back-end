@@ -70,18 +70,26 @@ exports.createOrder = async (req, res) => {
       return sendError(res, "Company must be approved before purchasing.", 403);
 
     const amountInPaise = plan.price * 100;
-    console.log("amountInPaise", amountInPaise);
-    try {
-      const order = await razorpay.orders.create({
-        amount: amountInPaise,
-        currency: "INR",
-        receipt: `sub_${company._id}`,
-        notes: { companyId: company._id.toString(), planType },
-      });
-    } catch (error) {
-      console.log("error", error);
-    }
-    console.log("order", order);
+console.log("amountInPaise", amountInPaise);
+
+let order;
+
+try {
+  order = await razorpay.orders.create({
+    amount: amountInPaise,
+    currency: "INR",
+    receipt: `sub_${company._id}`,
+    notes: {
+      companyId: company._id.toString(),
+      planType,
+    },
+  });
+} catch (error) {
+  console.log("Razorpay Error:", error);
+  return sendError(res, "Failed to create Razorpay order");
+}
+
+console.log("order", order);
     const Payment = require("../models/Payment");
     const payment = await Payment.create({
       companyId: company._id,
